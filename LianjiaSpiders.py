@@ -479,7 +479,7 @@ def main():
     mySQL = MySQL()
     mySQL._init_('localhost', 'root', 'root', 'fang')
     start_page=1
-    end_page=2
+    end_page=101
     sleep_time=0.5
     #getLineMain()
     #getTransMain()
