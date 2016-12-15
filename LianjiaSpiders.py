@@ -76,8 +76,8 @@ def LianjiaLogin():
 
     # data
     data = {
-    'username': '15900445100', #替换为自己账户的用户名
-    'password': 'Pa82839473', #替换为自己账户的密码
+    'username': 'XXXX', #替换为自己账户的用户名
+    'password': 'XXXX', #替换为自己账户的密码
     'execution': execution,
     '_eventId': 'submit',
     'lt': lt,
