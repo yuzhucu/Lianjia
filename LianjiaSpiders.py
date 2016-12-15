@@ -5,6 +5,7 @@
 # 创建时间：2016/11/10
 # 更新历史：2016/11/26
 #          2016.11.27:增加地铁找房；更新区域参数；拆分模块 ，以便于单独调用
+#          2016.12.06 加入多线程处理
 # 使用库：requests、BeautifulSoup4、MySQLdb
 # 作者：yuzhucu
 #############################################################################
@@ -12,7 +13,109 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import MySQLdb
+import urllib
+import urllib2
+import json
+import cookielib
+import re
+import zlib
+from threading import Thread
+from Queue import Queue
+from time import sleep
+#登录，不登录不能爬取三个月之内的数据
+#import LianJiaLogIn
+def LianjiaLogin():
+    #获取Cookiejar对象（存在本机的cookie消息）
+    cookie = cookielib.CookieJar()
+    #自定义opener,并将opener跟CookieJar对象绑定
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookie))
+    #安装opener,此后调用urlopen()时都会使用安装过的opener对象
+    urllib2.install_opener(opener)
 
+
+    home_url = 'http://sh.lianjia.com/'
+    auth_url = 'https://passport.lianjia.com/cas/login?service=http%3A%2F%2Fsh.lianjia.com%2F'
+    #auth_url='https://passport.lianjia.com/cas/login?service=http%3A%2F%2Fuser.sh.lianjia.com%2Findex'
+    chengjiao_url = 'http://sh.lianjia.com/chengjiao/'
+
+
+    headers = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, sdch',
+    'Accept-Language': 'zh-CN,zh;q=0.8',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Host': 'passport.lianjia.com',
+    'Pragma': 'no-cache',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36'
+}
+
+    # 获取lianjia_uuid
+    req = urllib2.Request('http://sh.lianjia.com/')
+    opener.open(req)
+    # 初始化表单
+    req = urllib2.Request(auth_url, headers=headers)
+    result = opener.open(req)
+
+
+    # 获取cookie和lt值
+    pattern = re.compile(r'JSESSIONID=(.*)')
+    jsessionid = pattern.findall(result.info().getheader('Set-Cookie').split(';')[0])[0]
+
+    html_content = result.read()
+    gzipped = result.info().getheader('Content-Encoding')
+    if gzipped:
+        html_content = zlib.decompress(html_content, 16+zlib.MAX_WBITS)
+    pattern = re.compile(r'value=\"(LT-.*)\"')
+    lt = pattern.findall(html_content)[0]
+    pattern = re.compile(r'name="execution" value="(.*)"')
+    execution = pattern.findall(html_content)[0]
+
+
+    # data
+    data = {
+    'username': '15900445100', #替换为自己账户的用户名
+    'password': 'Pa82839473', #替换为自己账户的密码
+    'execution': execution,
+    '_eventId': 'submit',
+    'lt': lt,
+    'verifyCode': '',
+    'redirect': '',
+    }
+
+    # urllib进行编码
+    post_data=urllib.urlencode(data)
+
+
+    headers = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'zh-CN,zh;q=0.8',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Host': 'passport.lianjia.com',
+    'Origin': 'https://passport.lianjia.com',
+    'Pragma': 'no-cache',
+    'Referer': 'https://passport.lianjia.com/cas/login?service=http%3A%2F%2Fsh.lianjia.com%2F',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
+    'Upgrade-Insecure-Requests': '1',
+    'X-Requested-With': 'XMLHttpRequest',
+    }
+    req = urllib2.Request(auth_url, post_data, headers)
+    try:
+        result = opener.open(req)
+    except urllib2.HTTPError, e:
+        print e.getcode()
+        print e.reason
+        print e.geturl()
+        print e.info()
+        req = urllib2.Request(e.geturl())
+        result = opener.open(req)
+        req = urllib2.Request(chengjiao_url)
+        result = opener.open(req).read()
 
 def getURL(url, tries_num=5, sleep_time=1, time_out=10):
     headers = {'content-type': 'application/json',
@@ -20,7 +123,11 @@ def getURL(url, tries_num=5, sleep_time=1, time_out=10):
     sleep_time_p = sleep_time
     time_out_p = time_out
     tries_num_p = tries_num
+    auth_url = 'https://passport.lianjia.com/cas/login?service=http%3A%2F%2Fsh.lianjia.com%2F'
     try:
+        #s = requests.Session()
+        #s.post(auth_url, {'username':'15900445100', 'password': 'Pa82839473',}, headers=headers)
+        #res = s.get(url, headers=headers, timeout=time_out)
         res = requests.get(url, headers=headers, timeout=time_out)
         res.raise_for_status()  # 如果响应状态码不是 200，就主动抛出异常
     except requests.RequestException as e:
@@ -36,6 +143,28 @@ def getURL(url, tries_num=5, sleep_time=1, time_out=10):
             print getCurrentTime(), url, 'URL Connection Success: 共尝试', tries_num - tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
     return res
 
+def getURL2(url, tries_num=5, sleep_time=1, time_out=10):
+
+    sleep_time_p = sleep_time
+    time_out_p = time_out
+    tries_num_p = tries_num
+    #auth_url = 'https://passport.lianjia.com/cas/login?service=http%3A%2F%2Fsh.lianjia.com%2F'
+    try:
+        res= urllib2.urlopen(url)
+        #res = requests.get(url, timeout=time_out)
+        #res.raise_for_status()  # 如果响应状态码不是 200，就主动抛出异常
+    except requests.RequestException as e:
+        sleep_time_p = sleep_time_p + 1
+        time_out_p = time_out_p + 5
+        tries_num_p = tries_num_p - 1
+        print getCurrentTime(), url, 'URL Connection Error: 第', tries_num - tries_num_p, u'次 Retry Connection', e
+        # 设置重试次数，最大timeout 时间和 最长休眠时间
+        if tries_num_p > 0 and sleep_time_p < 300 and time_out_p < 600:
+            time.sleep(sleep_time_p)
+            res = getURL(url, tries_num_p, sleep_time_p, time_out_p)
+            #return res
+            print getCurrentTime(), url, 'URL Connection Success: 共尝试', tries_num - tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
+    return res
 
 def getXiaoquList(fang_url):
     result = {}
@@ -73,7 +202,6 @@ def getXiaoquList(fang_url):
             except Exception, e:
                 print  getCurrentTime(), u"Exception:%d: %s" % (e.args[0], e.args[1])
     return result
-
 
 def getLianjiaList(fang_url):
     result = {}
@@ -121,7 +249,6 @@ def getLianjiaList(fang_url):
             # fangList.append(result)
     return result
 
-
 def getLianjiaTransList(fang_url):
     result = {}
     base_url = 'http://sh.lianjia.com'
@@ -154,7 +281,6 @@ def getLianjiaTransList(fang_url):
                 'price_pre'], result['price']  # ,result['fang_url']
     return result
 
-
 def getSubRegions(fang_url, region):
     base_url = 'http://sh.lianjia.com'
     res = getURL(fang_url + region['code'])
@@ -175,7 +301,6 @@ def getSubRegions(fang_url, region):
     #print getCurrentTime(),'getSubRegions:',result
     return result
 
-
 def getRegions(fang_url, region):
     base_url = 'http://sh.lianjia.com'
     url_fang = fang_url + region;
@@ -194,7 +319,6 @@ def getRegions(fang_url, region):
     #print getCurrentTime(),'getRegions:',result
     return result
 
-
 def getLines(fang_url, region):
     base_url = 'http://sh.lianjia.com'
     res = getURL(fang_url + region)
@@ -211,7 +335,6 @@ def getLines(fang_url, region):
             result.append(district)
     #print getCurrentTime(),'getLines:',result
     return result
-
 
 def getLinesStations(fang_url, region):
     base_url = 'http://sh.lianjia.com'
@@ -231,7 +354,6 @@ def getLinesStations(fang_url, region):
     return result
 
 # 获取当前时间
-
 def getCurrentTime():
     return time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(time.time()))
 
@@ -272,8 +394,8 @@ class MySQL:
                 if "key 'PRIMARY'" in e.args[1]:
                     print self.getCurrentTime(), u"Primary Key Constraint，No Data Insert:", e.args[0], e.args[1]
                     # return 0
-                # elif "MySQL server has gone away" in e.args :
-                #    _init_()
+                elif "MySQL server has gone away" in e.args :
+                    self._init_('localhost', 'root', 'root', 'fang')
                 else:
                     print self.getCurrentTime(), u"Data Insert Failed: %d: %s" % (e.args[0], e.args[1])
         except MySQLdb.Error, e:
@@ -473,19 +595,64 @@ def mainAll():
         print getCurrentTime(), region['name'], ':', 'Scrapy Finished'
     print getCurrentTime(), 'Lianjia Shanghai All Scrapy Success'
 
+def getSubregionsThread():
+    while True:
+        region = regionsQueue.get()
+        subRegions=getSubRegions('http://sh.lianjia.com/ershoufang/', region)
+        while subRegions:
+             try:
+                subRegion = subRegions.pop()
+                print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting.....'
+                time.sleep(sleep_time)
+                for i in range(start_page, end_page):
+                    chengjiao_url = 'http://sh.lianjia.com/chengjiao/' + subRegion['code'] + '/d' + str(i)
+                    print getCurrentTime(), subRegion['name'], chengjiao_url
+                    time.sleep(sleep_time)
+                    fang = getLianjiaTransList(chengjiao_url)
+                    if len(fang) < 1:
+                        print getCurrentTime(), region['name'], ':', subRegion['name'], u' : getLianjiaTransList Scrapy Finished'
+                        break
+
+                print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Finished'
+             except Exception, e:
+                print  getCurrentTime(), u"Exception:%s" % (e.message)
+        print getCurrentTime(), region['name'], ':', 'Scrapy Finished'
+        regionsQueue.task_done()
+
+def getTransThread():
+    regions = getRegions('http://sh.lianjia.com/ershoufang/', 'pudongxinqu')
+    regions.reverse()
+    while regions:
+       regionsQueue.put(regions.pop())
+    #fork NUM个线程等待队列
+    for i in range(NUM):
+      t = Thread(target= getSubregionsThread)
+      print i ,u'启动'
+      t.setDaemon(True)
+      t.start()
+    #等待所有JOBS完成
+    regionsQueue.join()
+    print getCurrentTime(), 'getTransMain Scrapy Success'
+
 def main():
+    #LianjiaLogin()
     print getCurrentTime(), 'Main Scrapy Starting'
-    global mySQL, start_page, end_page, sleep_time
+    global mySQL, start_page, end_page, sleep_time,regionsQueue,NUM,taskQueue
     mySQL = MySQL()
     mySQL._init_('localhost', 'root', 'root', 'fang')
     start_page=1
-    end_page=101
-    sleep_time=0.5
-    #getLineMain()
+    end_page=10
+    sleep_time=0.1
+    regionsQueue = Queue()  # q是任务队列
+    taskQueue= Queue()
+    NUM = 1  #NUM是并发线程总数
+    #JOBS = 100 #JOBS是有多少任务
     #getTransMain()
-    #getXiaoquMain()
+    #getTransThread()
     #getFangMain()
     mainAll()
+    #getXiaoquMain()
+    #getLineMain()
 
 if __name__ == "__main__":
     main()

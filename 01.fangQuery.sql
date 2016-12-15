@@ -1,6 +1,3 @@
-
-
-
 SELECT  a.*,'fang_list' FROM fang.lianjia_fang_regions a  ;
 SELECT  a.*,'fang_list' FROM fang.lianjia_fang_list a where a.updated_date>=curdate() order by a.updated_date desc;
 SELECT   a.*,'transaction' FROM fang.lianjia_fang_transaction a where a.updated_date>=curdate() order by a.updated_date desc;
