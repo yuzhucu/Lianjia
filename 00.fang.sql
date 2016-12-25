@@ -73,5 +73,3 @@ CREATE TABLE lianjia_fang_xiaoqu (
   PRIMARY KEY (xiaoqu_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-
-
