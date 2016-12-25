@@ -641,7 +641,7 @@ def main():
     mySQL = MySQL()
     mySQL._init_('localhost', 'root', 'root', 'fang')
     start_page=1
-    end_page=10
+    end_page=101
     sleep_time=0.1
     regionsQueue = Queue()  # q是任务队列
     taskQueue= Queue()
