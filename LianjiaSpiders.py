@@ -28,9 +28,9 @@ from time import sleep
 # 获取当前时间
 
 def getFangDetail():
-    for a in range(1,8):#面积
-        for l in ():#户型
-            for p in ():
+    for a in range(1,9):#面积
+        for l in  range(1,7):#户型
+            for p in  range(1,9):
                 result='a'+a+'l'+l+'p'+p
                 print result
 
