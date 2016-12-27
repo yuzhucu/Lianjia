@@ -6,6 +6,7 @@
 # 更新历史：2016/11/26
 #          2016.11.27:增加地铁找房；更新区域参数；拆分模块 ，以便于单独调用
 #          2016.12.06 加入多线程处理
+#          2016.12.28 增加按照面积、户型、总价等明细条件，以便扩大爬数范围
 # 使用库：requests、BeautifulSoup4、MySQLdb
 # 作者：yuzhucu
 #############################################################################
@@ -24,6 +25,18 @@ from Queue import Queue
 from time import sleep
 #登录，不登录不能爬取三个月之内的数据
 #import LianJiaLogIn
+# 获取当前时间
+
+def getFangDetail():
+    for a in range(1,8):#面积
+        for l in ():#户型
+            for p in ():
+                result='a'+a+'l'+l+'p'+p
+                print result
+
+def getCurrentTime():
+    return time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(time.time()))
+
 def LianjiaLogin():
     #获取Cookiejar对象（存在本机的cookie消息）
     cookie = cookielib.CookieJar()
@@ -243,6 +256,7 @@ def getLianjiaList(fang_url):
                 result['haskey'] = fang.select('.haskey-ex')[0].text.strip()
             if len(fang.select('.square')) > 0:
                 result['col_look'] = fang.select('.square')[0].span.text.strip()
+            result['updated_date']=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
             mySQL.insertData('lianjia_fang_list', result)
             print getCurrentTime(), u'在售：', result['fang_key'], result['quyu'], result['bankuai'], result['xiaoqu'], \
                                                  result['huxing'], result['price'], result['price_pre'], result['mianji']
@@ -353,9 +367,7 @@ def getLinesStations(fang_url, region):
     #print getCurrentTime(),'getLinesStations:',result
     return result
 
-# 获取当前时间
-def getCurrentTime():
-    return time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(time.time()))
+
 
 class MySQL:
     # 获取当前时间
@@ -377,7 +389,8 @@ class MySQL:
             self.db.set_character_set('utf8')
             cols = ', '.join(my_dict.keys())
             values = '"," '.join(my_dict.values())
-            sql = "INSERT INTO %s (%s) VALUES (%s)" % (table, cols, '"' + values + '"')
+            #sql = "INSERT INTO %s (%s) VALUES (%s)" % (table, cols, '"' + values + '"')
+            sql = "replace INTO %s (%s) VALUES (%s)" % (table, cols, '"' + values + '"')
             try:
                 result = self.cur.execute(sql)
                 insert_id = self.db.insert_id()
@@ -453,15 +466,20 @@ def getTransMain():
             try:
                 subRegion = subRegions.pop()
                 print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting.....'
-                # time.sleep(sleep_time)
-                for i in range(start_page, end_page):
-                    chengjiao_url = 'http://sh.lianjia.com/chengjiao/' + subRegion['code'] + '/d' + str(i)
-                    print getCurrentTime(), subRegion['name'], chengjiao_url
-                    time.sleep(sleep_time)
-                    fang = getLianjiaTransList(chengjiao_url)
-                    if len(fang) < 1:
-                        print getCurrentTime(), region['name'], ':', subRegion['name'], u' : getLianjiaTransList Scrapy Finished'
-                        break
+
+                for a in range(1,9):#面积
+                    for l in range(1,7):#户型
+                        for p in range(1,9):
+                            linkdetail='a'+str(a)+'l'+str(l)+'p'+str(p)
+                            # time.sleep(sleep_time)
+                            for i in range(start_page, end_page):
+                                 chengjiao_url = 'http://sh.lianjia.com/chengjiao/' + subRegion['code'] +linkdetail+ '/d' + str(i)
+                                 print getCurrentTime(), subRegion['name'], chengjiao_url
+                                 time.sleep(sleep_time)
+                                 fang = getLianjiaTransList(chengjiao_url)
+                                 if len(fang) < 1:
+                                    print getCurrentTime(), region['name'], ':', subRegion['name'], u' : getLianjiaTransList Scrapy Finished'
+                                    break
 
                 print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Finished'
             except Exception, e:
@@ -647,10 +665,10 @@ def main():
     taskQueue= Queue()
     NUM = 1  #NUM是并发线程总数
     #JOBS = 100 #JOBS是有多少任务
-    #getTransMain()
+    getTransMain()
     #getTransThread()
-    #getFangMain()
-    mainAll()
+    getFangMain()
+    #mainAll()
     #getXiaoquMain()
     #getLineMain()
 
