@@ -30,7 +30,7 @@ from time import sleep
 def getFangDetail():
     for a in range(1,9):#面积
         for l in  range(1,7):#户型
-            for p in  range(1,9):
+            for p in  range(1,9):#总价
                 result='a'+a+'l'+l+'p'+p
                 print result
 
