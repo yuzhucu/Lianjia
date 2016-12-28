@@ -27,12 +27,54 @@ from time import sleep
 #import LianJiaLogIn
 # 获取当前时间
 
-def getFangDetail():
+def getMaxPage(fang_url):
+    res = getURL(fang_url)
+    res.encoding = 'utf-8'
+    soup = BeautifulSoup(res.text, 'html.parser')
+    result =0
+    a=[]
+    pageBox = soup.find('div', class_="page-box house-lst-page-box")
+    try:
+        for link in pageBox.find_all('a'):
+            a=link.get('gahref')
+            if link.get('gahref')  in [ 'results_next_page']:
+               return result
+            if link.get('gahref') <> 'results_next_page':
+                result=link.get_text()
+                #print getCurrentTime(),'getPageBox: MaxPage:',link.get_text()
+        #print  result
+        return result
+    except Exception, e:
+               #print getCurrentTime(),'getPageBox: MaxPage:',a,result,e.message,fang_url
+               return 0
+    #print getCurrentTime(),'getPageBox: MaxPage:',a,result
+    return result
+
+def getFangCond():
+    result=[]
     for a in range(1,9):#面积
         for l in  range(1,7):#户型
             for p in  range(1,9):#总价
-                result='a'+a+'l'+l+'p'+p
-                print result
+                cond={}
+                cond['link']='a'+str(a)+'l'+str(l)+'p'+str(p)
+                cond['a']='a'+str(a)
+                cond['l']='l'+str(l)
+                cond['p']='p'+str(p)
+                print cond['link']
+                result.append(cond)
+    return result
+
+def getFangTransCond():
+    result=[]
+    for a in range(1,9):#面积
+        for l in  range(1,7):#户型
+                cond={}
+                cond['link']='a'+str(a)+'l'+str(l)
+                cond['a']='a'+str(a)
+                cond['l']='l'+str(l)
+                print cond['link']
+                result.append(cond)
+    return result
 
 def getCurrentTime():
     return time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(time.time()))
@@ -367,8 +409,6 @@ def getLinesStations(fang_url, region):
     #print getCurrentTime(),'getLinesStations:',result
     return result
 
-
-
 class MySQL:
     # 获取当前时间
     def getCurrentTime(self):
@@ -461,7 +501,7 @@ def getTransMain():
         print getCurrentTime(), 'Region:',region['name'], ':', 'Scrapy Starting.....'
         time.sleep(sleep_time)
         subRegions = getSubRegions('http://sh.lianjia.com/ershoufang/', region)
-        subRegions.reverse()
+        #subRegions.reverse()
         while subRegions:  # and  region in  ['pudongxinqu','minhang','baoshan','xuhui','putuo','yangpu','changning','songjiang','jiading','huangpu','jingan','zhabei','hongkou','qingpu','fengxian','jinshan','chongming','shanghaizhoubian']:
             try:
                 subRegion = subRegions.pop()
@@ -469,11 +509,11 @@ def getTransMain():
 
                 for a in range(1,9):#面积
                     for l in range(1,7):#户型
-                        for p in range(1,9):
-                            linkdetail='a'+str(a)+'l'+str(l)+'p'+str(p)
+                        #for p in range(1,9):
+                            linkdetail='a'+str(a)+'l'+str(l)
                             # time.sleep(sleep_time)
                             for i in range(start_page, end_page):
-                                 chengjiao_url = 'http://sh.lianjia.com/chengjiao/' + subRegion['code'] +linkdetail+ '/d' + str(i)
+                                 chengjiao_url = 'http://sh.lianjia.com/chengjiao/' + subRegion['code'] +'/'+linkdetail+ '/d' + str(i)
                                  print getCurrentTime(), subRegion['name'], chengjiao_url
                                  time.sleep(sleep_time)
                                  fang = getLianjiaTransList(chengjiao_url)
@@ -541,17 +581,35 @@ def getFangMain():
         while subRegions:  # and  region in  ['pudongxinqu','minhang','baoshan','xuhui','putuo','yangpu','changning','songjiang','jiading','huangpu','jingan','zhabei','hongkou','qingpu','fengxian','jinshan','chongming','shanghaizhoubian']:
             try:
                 subRegion = subRegions.pop()
+                maxPage=0
+                maxPage = getMaxPage( 'http://sh.lianjia.com/ershoufang/' + subRegion['code'])
                 print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting.....'
                 # time.sleep(sleep_time)
-                for i in range(start_page, end_page):
-                    fang_url = 'http://sh.lianjia.com/ershoufang/' + subRegion['code']+ '/d' + str(i)
-                    print getCurrentTime(), region['name'], ':', subRegion['name'], fang_url
-                    time.sleep(sleep_time)
-                    fang = getLianjiaList(fang_url)
-                    if len(fang) < 1:
-                        print getCurrentTime(), region['name'], ':', subRegion['name'], u' : getLianjiaList Scrapy Finished'
-                        break
-                print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Finished'
+                if maxPage<=end_page:
+                    maxPage=end_page
+                if maxPage<100:
+                    for i in range(start_page, maxPage+1):
+                        fang_url = 'http://sh.lianjia.com/ershoufang/' + subRegion['code']+ '/d' + str(i)
+                        print getCurrentTime(), region['name'], ':', subRegion['name'], fang_url
+                        time.sleep(sleep_time)
+                        fang = getLianjiaList(fang_url)
+                        if len(fang) < 1:
+                            print getCurrentTime(), region['name'], ':', subRegion['name'], u' : getLianjiaList Scrapy Finished'
+                            break
+                    print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Finished'
+                else:
+                    fangConds=getFangCond()
+                    fangConds.reverse()
+                    print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting..over 100 pages...'
+                    #while fangConds:
+                        #try:
+                         #   fangCond=fangConds.pop()
+                         #   print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting.....'
+                         #   maxPage=0
+                         #  maxPage=
+
+                        #pass
+                    pass
             except Exception, e:
                 print  getCurrentTime(), u"Exception:%s" % (e.message)
                 #if "MySQL server has gone away" in e.args:
@@ -652,6 +710,30 @@ def getTransThread():
     regionsQueue.join()
     print getCurrentTime(), 'getTransMain Scrapy Success'
 
+def getFangMaxPagesMain():
+     regions = getRegions('http://sh.lianjia.com/ershoufang/', 'pudongxinqu')
+     regions.reverse()
+     maxpage=0
+     while regions:
+         #time.sleep(sleep_time)
+         region = regions.pop()
+         maxpage=getMaxPage('http://sh.lianjia.com/ershoufang/'+ region['code'])
+         #print region['name'],': '+str(maxpage)
+
+         subRegions = getSubRegions('http://sh.lianjia.com/ershoufang/', region)
+         subRegions.reverse()
+
+         while subRegions:
+            #break
+            #time.sleep(sleep_time)
+            subRegion=subRegions.pop()
+            maxpage=getMaxPage('http://sh.lianjia.com/ershoufang/'+ subRegion['code'])
+            #print type(int(str(maxpage)))
+            if int(str(maxpage))>=100:
+                print region['name'],', '+subRegion['name'],': '+str(maxpage)
+     print 'Non regions over 100 pages'
+
+
 def main():
     #LianjiaLogin()
     print getCurrentTime(), 'Main Scrapy Starting'
@@ -665,12 +747,17 @@ def main():
     taskQueue= Queue()
     NUM = 1  #NUM是并发线程总数
     #JOBS = 100 #JOBS是有多少任务
-    getTransMain()
+    #getTransMain()
     #getTransThread()
-    getFangMain()
+    #getFangMain()
     #mainAll()
     #getXiaoquMain()
     #getLineMain()
+    url='http://sh.lianjia.com/ershoufang'
+    url='https://pan.baidu.com/notice/index'
+    #url='http://sh.lianjia.com/chengjiao/beicai/'
+    #getMaxPage(url)
+    getFangMaxPagesMain()
 
 if __name__ == "__main__":
     main()
