@@ -598,8 +598,8 @@ def getFangMain():
                             break
                     print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Finished'
                 else:
-                    fangConds=getFangCond()
-                    fangConds.reverse()
+                    #fangConds=getFangCond()
+                    #fangConds.reverse()
                     print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting..over 100 pages...'
                     #while fangConds:
                         #try:
@@ -750,14 +750,14 @@ def main():
     #getTransMain()
     #getTransThread()
     #getFangMain()
-    #mainAll()
+    mainAll()
     #getXiaoquMain()
     #getLineMain()
     url='http://sh.lianjia.com/ershoufang'
     url='https://pan.baidu.com/notice/index'
     #url='http://sh.lianjia.com/chengjiao/beicai/'
     #getMaxPage(url)
-    getFangMaxPagesMain()
+    #getFangMaxPagesMain()
 
 if __name__ == "__main__":
     main()
