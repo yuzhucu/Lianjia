@@ -66,7 +66,7 @@ def getSoufangList(fang_url):
             result['mianji']=fang.find('div','area alignR').get_text().strip()
             result['price']=fang.find('span','price').get_text().strip()
             result['unit_price']=fang.select('div.moreInfo > p.danjia.alignR.mt5')[0].get_text().strip()
-            print fang.select('div.moreInfo > p.danjia.alignR.mt5')[0].get_text().strip()
+            #print fang.select('div.moreInfo > p.danjia.alignR.mt5')[0].get_text().strip()
 
             result['updated_date']=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
             #mySQL.insertData('lianjia_fang_list', result)
