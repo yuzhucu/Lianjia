@@ -752,7 +752,7 @@ def main():
     #getFangMain()
     mainAll()
     #getXiaoquMain()
-    #getLineMain()
+    getLineMain()
     url='http://sh.lianjia.com/ershoufang'
     url='https://pan.baidu.com/notice/index'
     #url='http://sh.lianjia.com/chengjiao/beicai/'
