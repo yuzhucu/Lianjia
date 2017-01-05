@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 ############################################################################
 # 程序：上海搜房网爬虫
-# 功能：抓取上海链家二手房在售、成交数据 ，大约各5万记录；小区2万多个
+# 功能：抓取上海搜房网二手房在售、成交数据
 # 创建时间：2017/01/03
 # 更新历史：
 #
@@ -18,33 +18,32 @@ def getCurrentTime():
     # 获取当前时间
     return time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(time.time()))
 
-def getURL(url, tries_num=5, sleep_time=3, time_out=50):
+def getURL(url, tries_num=1000, sleep_time=5, time_out=100):
     headers = {'content-type': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36',
                "Host": "esf.sh.fang.com"}
     sleep_time_p = sleep_time
     time_out_p = time_out
-    tries_num_p = tries_num
+    tries_num_p = 0
     try:
         res = requests.get(url, headers=headers, timeout=time_out)
         res.raise_for_status()  # 如果响应状态码不是 200，就主动抛出异常
     except requests.RequestException as e:
         sleep_time_p = sleep_time_p + 1
-        time_out_p = time_out_p + 5
-        tries_num_p = tries_num_p - 1
-        print getCurrentTime(), url, 'URL Connection Error: 第', tries_num - tries_num_p, u'次 Retry Connection', e
+        time_out_p = time_out_p + 10
+        tries_num_p = tries_num_p +1
+        print getCurrentTime(), url, 'URL Connection Error: 第', tries_num_p, u'次 Retry Connection', e
         # 设置重试次数，最大timeout 时间和 最长休眠时间
-        if tries_num_p > 0 and sleep_time_p < 300 and time_out_p < 600:
+        if tries_num_p<=tries_num:
             time.sleep(sleep_time_p)
-            res = getURL(url, tries_num_p, sleep_time_p, time_out_p)
             #return res
-            print getCurrentTime(), url, 'URL Connection Success: 共尝试', tries_num - tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
+            print getCurrentTime(), url, 'URL Connection Success: 共尝试', tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
+            return getURL(url, tries_num-time_out_p+1, sleep_time_p, time_out_p)
     return res
 
 def getSoufangList(fang_url):
     base_url=''
     result = {}
-    #res = requests.get(fang_url)
     res=getURL(fang_url)
     res.encoding = 'gbk'
     soup = BeautifulSoup(res.text, 'lxml')
@@ -65,105 +64,60 @@ def getSoufangList(fang_url):
             result['mianji']=fang.select('div')[2].text.strip()
             result['mianji']=fang.find('div','area alignR').get_text().strip()
             result['price']=fang.find('span','price').get_text().strip()
-            result['unit_price']=fang.select('div.moreInfo > p.danjia.alignR.mt5')[0].get_text().strip()
+            result['price_pre']=fang.select('div.moreInfo > p.danjia.alignR.mt5')[0].get_text().strip()
             #print fang.select('div.moreInfo > p.danjia.alignR.mt5')[0].get_text().strip()
-
+            result['data_source']='Soufang'
             result['updated_date']=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-            #mySQL.insertData('lianjia_fang_list', result)
+            mySQL.insertData('soufang_fang_list', result)
             print getCurrentTime(), u'在售：', result['xiaoqu'], result['address'], result['fang_desc'] ,\
-                result['huxing'], result['louceng'],result['chaoxiang'],result['price'],u'万',result['unit_price']
-            # fangList.append(result)
+                result['huxing'], result['louceng'],result['chaoxiang'],result['price'],u'万',result['price_pre']
+            #fangList.append(result)
             #break
-        except:
-            pass
+        except Exception, e:
+             print  getCurrentTime(), u"Exception:%s" % (e.message)
+    return result
+
+def getRegions(fang_url):
+    res = getURL(fang_url)
+    res.encoding = 'gbk'
+    item=[]
+    soup = BeautifulSoup(res.text, 'html.parser')
+    result = []
+    print type( result)
+    gio_district = soup.find('div', class_="qxName")
+    try:
+        for link in gio_district.find_all('a'):
+            district = {}
+            district['code'] = link.get('href')
+            district['name']=link.get_text()
+            print  district['code'],district['name']
+            if  link.get('href'):
+                pass
+            else:
+                result.append(district)
+    except  Exception, e:
+            print  getCurrentTime(),'getRegions',fang_url,  u"Exception:%s" % (e.message)
+            return result
 
     return result
 
-def getRegions(fang_url, region):
-    base_url = 'http://sh.lianjia.com'
-    url_fang = fang_url + region;
-    res = getURL(fang_url + region)
-    res.encoding = 'utf-8'
+def getSubRegions(fang_url):
+    res = getURL(fang_url)
+    res.encoding = 'gbk'
     soup = BeautifulSoup(res.text, 'html.parser')
     result = []
-    gio_district = soup.find('div', class_="option-list gio_district")
-    for link in gio_district.find_all('a'):
-        district = {}
-        district['link']=link.get('href')
-        district['code'] = link.get('gahref')
-        district['name']=link.get_text()
-        if district['code'] not in ['district-nolimit']:
-            result.append(district)
-    #print getCurrentTime(),'getRegions:',result
-    return result
-
-def getSubRegions(fang_url, region):
-    base_url = 'http://sh.lianjia.com'
-    res = getURL(fang_url + region['code'])
-    res.encoding = 'utf-8'
-    soup = BeautifulSoup(res.text, 'html.parser')
-    result = []
-    gio_plate = soup.find('div', class_="option-list sub-option-list gio_plate")
+    gio_plate = soup.find('p', id="shangQuancontain")
     try:
         for link in gio_plate.find_all('a'):
             district = {}
-            district['link']=link.get('href')
-            district['code'] = link.get('gahref')
+            district['code'] = link.get('href')
             district['name']=link.get_text()
-            if district['code'] not in ['plate-nolimit']:
+            print  district['code'],district['name']
+            if district['code'] not in [u'不限']:
                 result.append(district)
-    except AttributeError:
-        return result
-    #print getCurrentTime(),'getSubRegions:',result
-    return result
-
-def getMaxPage(fang_url):
-    res = getURL(fang_url)
-    res.encoding = 'utf-8'
-    soup = BeautifulSoup(res.text, 'html.parser')
-    result =0
-    a=[]
-    pageBox = soup.find('div', class_="page-box house-lst-page-box")
-    try:
-        for link in pageBox.find_all('a'):
-            a=link.get('gahref')
-            if link.get('gahref')  in [ 'results_next_page']:
-               return result
-            if link.get('gahref') <> 'results_next_page':
-                result=link.get_text()
-                #print getCurrentTime(),'getPageBox: MaxPage:',link.get_text()
-        #print  result
-        return result
     except Exception, e:
-               #print getCurrentTime(),'getPageBox: MaxPage:',a,result,e.message,fang_url
-               return 0
-    #print getCurrentTime(),'getPageBox: MaxPage:',a,result
-    return result
-
-def getFangCond():
-    result=[]
-    for a in range(1,9):#面积
-        for l in  range(1,7):#户型
-            for p in  range(1,9):#总价
-                cond={}
-                cond['link']='a'+str(a)+'l'+str(l)+'p'+str(p)
-                cond['a']='a'+str(a)
-                cond['l']='l'+str(l)
-                cond['p']='p'+str(p)
-                print cond['link']
-                result.append(cond)
-    return result
-
-def getFangTransCond():
-    result=[]
-    for a in range(1,9):#面积
-        for l in  range(1,7):#户型
-                cond={}
-                cond['link']='a'+str(a)+'l'+str(l)
-                cond['a']='a'+str(a)
-                cond['l']='l'+str(l)
-                print cond['link']
-                result.append(cond)
+            print  getCurrentTime(),'getSubRegions',fang_url, u"Exception:%s" % (e.message)
+            return result
     return result
 
 class MySQL:
@@ -211,6 +165,36 @@ class MySQL:
         except MySQLdb.Error, e:
             print self.getCurrentTime(), u"MySQLdb Error:%d: %s" % (e.args[0], e.args[1])
 
+def getSoufangMain(url):
+    regions = getRegions(url)
+    regions.reverse()
+    while regions:
+        region = regions.pop()
+        print getCurrentTime(), 'Region:',region['name'], ':', 'Scrapy Starting.....'
+        time.sleep(sleep_time)
+        print 'http://esf.sh.fang.com',type(region['code'])
+        subRegions = getSubRegions('http://esf.sh.fang.com'+str(region['code']))
+
+        subRegions.reverse()
+        while subRegions:
+            try:
+                subRegion = subRegions.pop()
+                print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting.....'
+                time.sleep(sleep_time)
+                for i in range(start_page, end_page):
+                        fang_url = 'http://esf.sh.fang.com' + subRegion['code']+ '/i3' + str(i)
+                        print getCurrentTime(), region['name'], ':', subRegion['name'], fang_url
+                        time.sleep(sleep_time)
+                        fang = getSoufangList(fang_url)
+                        if len(fang) < 1:
+                            print getCurrentTime(), region['name'], ':', subRegion['name'], u' : getSoufangList Scrapy Finished'
+                            break
+                        print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Finished'
+            except Exception, e:
+                   print  getCurrentTime(), u"Exception:%s" % (e.message)
+        print getCurrentTime(), region['name'], ':', 'Scrapy Finished'
+    print getCurrentTime(), 'getSoufangMain Scrapy Success'
+
 def main():
     print getCurrentTime(), 'Main Scrapy Starting'
     global mySQL, start_page, end_page, sleep_time
@@ -219,9 +203,11 @@ def main():
     start_page=1
     end_page=101
     sleep_time=0.1
-    url='http://esf.sh.fang.com/'
-    base_url = 'http://esf.sh.fang.com/'
-    getSoufangList(url)
+    url='http://esf.sh.fang.com'
+    #url2='http://esf.sh.fang.com/house-a025/'
+    #getRegions(url)
+    #getSubRegions(url2)
+    getSoufangMain(url)
 
 if __name__ == "__main__":
     main()
