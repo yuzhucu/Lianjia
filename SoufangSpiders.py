@@ -37,8 +37,9 @@ def getURL(url, tries_num=1000, sleep_time=5, time_out=100):
         if tries_num_p<=tries_num:
             time.sleep(sleep_time_p)
             #return res
-            print getCurrentTime(), url, 'URL Connection Success: 共尝试', tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
             return getURL(url, tries_num-time_out_p+1, sleep_time_p, time_out_p)
+            print getCurrentTime(), url, 'URL Connection Success: 共尝试', tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
+
     return res
 
 def getSoufangList(fang_url):
@@ -80,20 +81,16 @@ def getSoufangList(fang_url):
 def getRegions(fang_url):
     res = getURL(fang_url)
     res.encoding = 'gbk'
-    item=[]
     soup = BeautifulSoup(res.text, 'html.parser')
     result = []
-    print type( result)
     gio_district = soup.find('div', class_="qxName")
     try:
         for link in gio_district.find_all('a'):
             district = {}
             district['code'] = link.get('href')
             district['name']=link.get_text()
-            print  district['code'],district['name']
-            if  link.get('href'):
-                pass
-            else:
+            #print  district['code'],district['name']
+            if  district['name']<>u'\u4e0d\u9650':
                 result.append(district)
     except  Exception, e:
             print  getCurrentTime(),'getRegions',fang_url,  u"Exception:%s" % (e.message)
@@ -172,9 +169,7 @@ def getSoufangMain(url):
         region = regions.pop()
         print getCurrentTime(), 'Region:',region['name'], ':', 'Scrapy Starting.....'
         time.sleep(sleep_time)
-        print 'http://esf.sh.fang.com',type(region['code'])
         subRegions = getSubRegions('http://esf.sh.fang.com'+str(region['code']))
-
         subRegions.reverse()
         while subRegions:
             try:
@@ -182,9 +177,10 @@ def getSoufangMain(url):
                 print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting.....'
                 time.sleep(sleep_time)
                 for i in range(start_page, end_page):
-                        fang_url = 'http://esf.sh.fang.com' + subRegion['code']+ '/i3' + str(i)
+                        fang_url = 'http://esf.sh.fang.com' + subRegion['code']+ 'i3' + str(i)
                         print getCurrentTime(), region['name'], ':', subRegion['name'], fang_url
                         time.sleep(sleep_time)
+                        #if region['code']<> subRegion['code']:
                         fang = getSoufangList(fang_url)
                         if len(fang) < 1:
                             print getCurrentTime(), region['name'], ':', subRegion['name'], u' : getSoufangList Scrapy Finished'
@@ -205,7 +201,7 @@ def main():
     sleep_time=0.1
     url='http://esf.sh.fang.com'
     #url2='http://esf.sh.fang.com/house-a025/'
-    #getRegions(url)
+    aa=getRegions(url)
     #getSubRegions(url2)
     getSoufangMain(url)
 
