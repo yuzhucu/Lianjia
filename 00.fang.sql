@@ -73,3 +73,27 @@ CREATE TABLE lianjia_fang_xiaoqu (
   PRIMARY KEY (xiaoqu_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE soufang_fang_list (
+  fang_key varchar(45) NOT NULL,
+  fang_desc varchar(45) DEFAULT NULL,
+  fang_url varchar(200) DEFAULT NULL,
+  price varchar(45) DEFAULT NULL,
+  price_pre varchar(45) DEFAULT NULL,
+  xiaoqu varchar(45) DEFAULT NULL,
+  huxing varchar(45) DEFAULT NULL,
+  mianji varchar(45) DEFAULT NULL,
+  quyu varchar(45) DEFAULT NULL,
+  bankuai varchar(45) DEFAULT NULL,
+  louceng varchar(45) DEFAULT NULL,
+  chaoxiang varchar(45) DEFAULT NULL,
+  age varchar(45) DEFAULT NULL,
+  subway varchar(45) DEFAULT NULL,
+  taxfree varchar(45) DEFAULT NULL,
+  haskey varchar(45) DEFAULT NULL,
+  col_look varchar(45) DEFAULT NULL,
+  created_date datetime DEFAULT CURRENT_TIMESTAMP,
+  updated_date datetime DEFAULT CURRENT_TIMESTAMP,
+  data_source varchar(45) DEFAULT 'Lianjia',
+  address varchar(500) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
