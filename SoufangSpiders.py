@@ -210,13 +210,13 @@ def getSoufangMutiCityMain(city):
             try:
                 subRegion = subRegions.pop()
                 print getCurrentTime(), region['name'], ':', subRegion['name'], 'Scrapy Starting.....'
-                time.sleep(sleep_time)
+                # time.sleep(sleep_time)
                 for i in range(start_page, end_page):
                     args = {'region': region['name'], 'subRegion': subRegion['name'], 'city': city['city'],
                             'base_url': city['base_url']}
                     fang_url = city['base_url'] + subRegion['code'] + 'i3' + str(i)
-                    print getCurrentTime, args['region'], args['subRegion'], args['city'], args['base_url'], fang_url
-                    time.sleep(sleep_time)
+                    print getCurrentTime(), args['city'], args['region'], args['subRegion'], fang_url
+                    #time.sleep(sleep_time)
                     fang = getSoufangList(fang_url, args)
                     if len(fang) < 1:
                         print getCurrentTime(), region['name'], ':', subRegion[
