@@ -3,7 +3,7 @@
 # 程序：上海搜房网爬虫
 # 功能：抓取上海搜房网二手房在售、成交数据
 # 创建时间：2017/01/03
-# 更新历史：
+# 更新历史：2017/01/07 增加多城市处理、随机Header
 #
 # 使用库：requests、BeautifulSoup4、MySQLdb
 # 作者：yuzhucu
@@ -12,18 +12,18 @@ import requests
 from bs4 import BeautifulSoup
 import lxml
 import time
+import random
 import MySQLdb
 
 def getCurrentTime():
     # 获取当前时间
     return time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(time.time()))
 
-
 def getURL(url, tries_num=50, sleep_time=0, time_out=10):
     # header = {'content-type': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
     #            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36',
     #            "Host": "esf.sh.fang.com"}
-    # proxy ={ "http": "10.11.12.13:8080", "https": "http://10.11.12.13:8080" }
+    # proxy ={ "http": "110.11.12.13:8080", "https": "http://110.11.12.13:8080" }
     sleep_time_p = sleep_time
     time_out_p = time_out
     tries_num_p = tries_num
@@ -43,13 +43,12 @@ def getURL(url, tries_num=50, sleep_time=0, time_out=10):
         if tries_num_p > 0:
             time.sleep(sleep_time_p)
             print getCurrentTime(), url, 'URL Connection Error: 第', max_retry - tries_num_p, u'次 Retry Connection', e
-            res = getURL(url, tries_num_p, sleep_time_p, time_out_p)
-            if res.status_code == 200:
-                print getCurrentTime(), url, 'URL Connection Success: 共尝试', max_retry - tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
-            else:
-                print getCurrentTime(), url, 'URL Connection Error: 共尝试', max_retry - tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
+            return getURL(url, tries_num_p, sleep_time_p, time_out_p)
+    # if res.status_code == 200:
+    #             print getCurrentTime(), url, 'URL Connection Success: 共尝试', max_retry - tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
+    #         else:
+    #             print getCurrentTime(), url, 'URL Connection Error: 共尝试', max_retry - tries_num_p, u'次', ',sleep_time:', sleep_time_p, ',time_out:', time_out_p
     return res
-
 
 def getSoufangList(fang_url, args):
     base_url = args['base_url']
@@ -68,7 +67,13 @@ def getSoufangList(fang_url, args):
             result['huxing'] = fang.select('p')[1].contents[0].strip()
             result['louceng'] = fang.select('p')[1].contents[2].strip()
             result['chaoxiang'] = fang.select('p')[1].contents[4].strip()
-            result['age'] = fang.select('p')[1].contents[6].strip()
+            try:
+                result['age'] = fang.select('p')[1].contents[6].strip()
+            except Exception as e:
+                # 建筑年代和朝向可能缺失，如缺失先放一样
+                result['age'] = result['chaoxiang']
+                print getCurrentTime(), u"Exception:%s" % (e.message), result['fang_url'], result[
+                    'fang_desc'], 'chaoxiang:', result['chaoxiang'], 'age:', result['age']
             result['xiaoqu'] = fang.select('p')[2].span.text.strip()
             result['address'] = fang.find('span', 'iconAdress ml10 gray9').get_text()
             # result['subway']=fang.find('span','train note').text.strip()
@@ -90,7 +95,7 @@ def getSoufangList(fang_url, args):
                 result['huxing'], result['louceng'], result['chaoxiang'], result['price'], u'万', result[
                 'price_pre'], mianji, result['fang_desc']
         except Exception as e:
-            print  getCurrentTime(), u"Exception:%s" % (e.message)
+            print  getCurrentTime(), u"Exception:%s" % (e.message), result['fang_url'], result['fang_desc']
     return result
 
 def getRegions(fang_url):
@@ -129,6 +134,39 @@ def getSubRegions(fang_url):
     except Exception, e:
         print  getCurrentTime(), 'getSubRegions', fang_url, u"Exception:%s" % (e.message)
         return result
+    return result
+
+def randHeader():
+    head_connection = ['Keep-Alive', 'close']
+    head_accept = ['text/html, application/xhtml+xml, */*']
+    head_accept_language = ['zh-CN,fr-FR;q=0.5', 'en-US,en;q=0.8,zh-Hans-CN;q=0.5,zh-Hans;q=0.3']
+    head_user_agent = ['Opera/8.0 (Macintosh; PPC Mac OS X; U; en)',
+                       'Opera/9.27 (Windows NT 5.2; U; zh-cn)',
+                       'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Win64; x64; Trident/4.0)',
+                       'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)',
+                       'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; InfoPath.2; .NET4.0C; .NET4.0E)',
+                       'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; InfoPath.2; .NET4.0C; .NET4.0E; QQBrowser/7.3.9825.400)',
+                       'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0; BIDUBrowser 2.x)',
+                       'Mozilla/5.0 (Windows; U; Windows NT 5.1) Gecko/20070309 Firefox/2.0.0.3',
+                       'Mozilla/5.0 (Windows; U; Windows NT 5.1) Gecko/20070803 Firefox/1.5.0.12',
+                       'Mozilla/5.0 (Windows; U; Windows NT 5.2) Gecko/2008070208 Firefox/3.0.1',
+                       'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.12) Gecko/20080219 Firefox/2.0.0.12 Navigator/9.0.0.6',
+                       'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.95 Safari/537.36',
+                       'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; rv:11.0) like Gecko)',
+                       'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0 ',
+                       'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Maxthon/4.0.6.2000 Chrome/26.0.1410.43 Safari/537.1 ',
+                       'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.92 Safari/537.1 LBBROWSER',
+                       'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36',
+                       'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.11 TaoBrowser/3.0 Safari/536.11',
+                       'Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko',
+                       'Mozilla/5.0 (Macintosh; PPC Mac OS X; U; en) Opera 8.0'
+                       ]
+    result = {
+        'Connection': head_connection[0],
+        'Accept': head_accept[0],
+        'Accept-Language': head_accept_language[1],
+        'User-Agent': head_user_agent[random.randrange(0, len(head_user_agent))]
+    }
     return result
 
 class MySQL:
@@ -196,7 +234,6 @@ def getSoufangMain(url):
         print getCurrentTime(), region['name'], ':', 'Scrapy Finished'
     print getCurrentTime(), 'getSoufangMain Scrapy Success'
 
-
 def getSoufangMutiCityMain(city):
     regions = getRegions(city['base_url'])
     regions.reverse()
@@ -235,20 +272,21 @@ def main():
     mySQL._init_('localhost', 'root', 'root', 'fang')
     # mySQL._init_('110.20.15.79', 'cyz', 'cyz', 'cyzdb')
     proxy = {"http": "http://110.37.84.147:8080", "https": "http://110.37.84.147:8080"}
-    header = {'content-type': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36',
-              "Host": "esf.sh.fang.com"}
+    # header = {'content-type': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    #           'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36',
+    #           "Host": "esf.sh.fang.com"}
+    header = randHeader()
     start_page = 1
     end_page = 101
     sleep_time = 0.1
     isproxy = 0  # 如需要使用代理，改为1，并设置代理IP参数 proxy
     max_retry = 50
     url = 'http://esf.sh.fang.com'
-    cities = [{'base_url': 'http://esf.sh.fang.com', 'city': 'ShangHai'},
-              {'base_url': 'http://esf.zz.fang.com', 'city': 'ZhengZhou'},
-              {'base_url': 'http://esf.sz.fang.com/', 'city': 'ShenZhen'},
-              {'base_url': 'http://esf.fang.com/', 'city': 'BeiJing'},
-              {'base_url': 'http://esf.gz.fang.com/', 'city': 'GuangZhou'}
+    cities = [{'base_url': 'http://esf.zz.fang.com', 'city': 'ZhengZhou'},
+              {'base_url': 'http://esf.sh.fang.com', 'city': 'ShangHai'},
+              {'base_url': 'http://esf.sz.fang.com', 'city': 'ShenZhen'},
+              {'base_url': 'http://esf.gz.fang.com', 'city': 'GuangZhou'},
+              {'base_url': 'http://esf.fang.com', 'city': 'BeiJing'}
               ]
     # getRegions(url)
     # getSubRegions(url)
@@ -256,6 +294,5 @@ def main():
     # getSoufangMain(url)
     for city in cities:
         getSoufangMutiCityMain(city)
-
 if __name__ == "__main__":
     main()
