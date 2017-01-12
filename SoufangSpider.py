@@ -155,7 +155,40 @@ class SoufangSpider():
                 if district['base_url'] not in [u'http://www.hkproperty.com/',u'/newsecond/esfcities.aspx']:
                     result.append(district)
         except  Exception, e:
-            print  self.getCurrentTime(), 'getRegions', fang_url, u"Exception:%s" % (e.message)
+            print  self.getCurrentTime(), 'getCityURL', fang_url, u"Exception:%s" % (e.message)
+            return result
+        #print result
+        return result
+
+   def getAllCityURL(self,fang_url):
+        '''
+           从给定的主页登录，获取一级城市URL链接信息；剔除香港和更多城市链接
+           :param fang_url:给定的主页登录，也可以从任一城市或者区域入口进入
+           :return:返回城市名称及URL信息
+        '''
+        res = getURL(fang_url)
+        res.encoding = 'gbk'
+        soup = BeautifulSoup(res.text, 'html.parser')
+        result = []
+        gio_district = soup.find_all('a', class_="red")
+        #gio_district = soup.select('#c02 > ul')
+        #patt=re.compile(r'(<a class=(""|"red") href="http://esf*</a>)')
+        #print type(gio_district),len(gio_district),type(gio_district[0])
+        print type(gio_district),len(gio_district),(gio_district)
+        #links=re.findall(patt,gio_district[0])
+        try:
+            for i in range(0,170):
+              #for link in links.find('a'):
+                link=gio_district[i]
+                district = {}
+                district['base_url'] = link.get('href')
+                district['city'] = link.get_text()
+                print  district['code'],district['name']
+                #剔除香港和更多城市链接
+                if district['base_url'] not in [u'http://www.hkproperty.com/',u'/newsecond/esfcities.aspx']:
+                    result.append(district)
+        except  Exception, e:
+            print  self.getCurrentTime(), 'getAllCityURL', fang_url, u"Exception:%s" % (e.message)
             return result
         #print result
         return result
@@ -309,7 +342,8 @@ def main():
     global mySQL, start_page, end_page, sleep_time, isproxy, proxy, header
     mySQL = MySQL()
     soufang=SoufangSpider()
-    mySQL._init_('localhost', 'root', 'root', 'fang')
+    #mySQL._init_('localhost', 'root', 'root', 'fang')
+    mySQL._init_('115.159.209.101', 'root', 'root', 'fang')
     isproxy = 0  # 如需要使用代理，改为1，并设置代理IP参数 proxy
     proxy = {"http": "http://110.37.84.147:8080", "https": "http://110.37.84.147:8080"}#这里需要替换成可用的代理IP
     header = randHeader()
@@ -321,14 +355,22 @@ def main():
     获取城市列表，并逐个城市爬取；后面有时间研究下多线程并发处理
     整个测试下来，发现就上海的爬取比较慢，网络经常中断，其他城市都还好。本地区网络不应该更快么，还是上海的访问量远大于其他城市？
     '''
-    cities = [{'base_url': 'http://esf.sh.fang.com', 'city': u'上海'},
-              {'base_url': 'http://esf.zz.fang.com', 'city': u'郑州'},
-              {'base_url': 'http://esf.sz.fang.com', 'city': u'深圳'},
-              {'base_url': 'http://esf1.fang.com', 'city': u'北京'},
-              {'base_url': 'http://esf.gz.fang.com', 'city': u'广州'}
+    cities = [{'base_url': 'http://esf.sh.fang.com/', 'city': u'上海'},
+              {'base_url': 'http://esf.zz.fang.com/', 'city': u'郑州'},
+              {'base_url': 'http://esf.sz.fang.com/', 'city': u'深圳'},
+              {'base_url': 'http://esf1.fang.com/', 'city': u'北京'},
+              {'base_url': 'http://esf.gz.fang.com/', 'city': u'广州'}
               ]
-    #cities = soufang.getCityURL(url)
+    cities = soufang.getCityURL(url)
+    citylist='http://esf.sh.fang.com/newsecond/esfcities.aspx'
+    #cities = soufang.getAllCityURL(citylist)
+    #cities.reverse()
     for city in cities:
-        soufang.getSoufangMutiCityMain(city)
+          print city['city'],city['base_url']
+          if city['base_url'] in ['http://esf.sh.fang.com/','http://esf.zz.fang.com/','http://esf.sz.fang.com/','http://esf1.fang.com/','http://esf.gz.fang.com/']:
+              print 'continue'
+          else:
+              soufang.getSoufangMutiCityMain(city)
+
 if __name__ == "__main__":
     main()

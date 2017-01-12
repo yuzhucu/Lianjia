@@ -23,32 +23,6 @@ import zlib
 from threading import Thread
 from Queue import Queue
 from time import sleep
-#登录，不登录不能爬取三个月之内的数据
-#import LianJiaLogIn
-# 获取当前时间
-
-def getMaxPage(fang_url):
-    res = getURL(fang_url)
-    res.encoding = 'utf-8'
-    soup = BeautifulSoup(res.text, 'html.parser')
-    result =0
-    a=[]
-    pageBox = soup.find('div', class_="page-box house-lst-page-box")
-    try:
-        for link in pageBox.find_all('a'):
-            a=link.get('gahref')
-            if link.get('gahref')  in [ 'results_next_page']:
-               return result
-            if link.get('gahref') <> 'results_next_page':
-                result=link.get_text()
-                #print getCurrentTime(),'getPageBox: MaxPage:',link.get_text()
-        #print  result
-        return result
-    except Exception, e:
-               #print getCurrentTime(),'getPageBox: MaxPage:',a,result,e.message,fang_url
-               return 0
-    #print getCurrentTime(),'getPageBox: MaxPage:',a,result
-    return result
 
 def getFangCond():
     result=[]
@@ -251,8 +225,9 @@ def getXiaoquList(fang_url):
                     result['fang_url'] = base_url + fang.select('.square')[0].a['href'].strip()
                     getLianjiaList(result['fang_url'])
                 mySQL.insertData('lianjia_fang_xiaoqu', result)
-                print getCurrentTime(), u'小区：', result['xiaoqu_key'], result['xiaoqu_name'], result['age'], result[ 'quyu'],result['bankuai'], \
-                                                     result['subway'], result['xiaoqu_url'], result['price'], result['onsale_num'], result['fang_url']
+                print getCurrentTime(), u'小区：', result['xiaoqu_key'], result['quyu'], result['bankuai'], result[
+                    'xiaoqu_name'], result['age'], \
+                    result['subway'], result['xiaoqu_url'], result['price'], result['onsale_num'], result['fang_url']
                 getLianjiaList(result['fang_url'])
             except Exception, e:
                 print  getCurrentTime(), u"Exception:%d: %s" % (e.args[0], e.args[1])
@@ -710,6 +685,29 @@ def getTransThread():
     regionsQueue.join()
     print getCurrentTime(), 'getTransMain Scrapy Success'
 
+def getMaxPage(fang_url):
+    res = getURL(fang_url)
+    res.encoding = 'utf-8'
+    soup = BeautifulSoup(res.text, 'html.parser')
+    result =0
+    a=[]
+    pageBox = soup.find('div', class_="page-box house-lst-page-box")
+    try:
+        for link in pageBox.find_all('a'):
+            a=link.get('gahref')
+            if link.get('gahref')  in [ 'results_next_page']:
+               return result
+            if link.get('gahref') <> 'results_next_page':
+                result=link.get_text()
+                #print getCurrentTime(),'getPageBox: MaxPage:',link.get_text()
+        #print  result
+        return result
+    except Exception, e:
+               #print getCurrentTime(),'getPageBox: MaxPage:',a,result,e.message,fang_url
+               return 0
+    #print getCurrentTime(),'getPageBox: MaxPage:',a,result
+    return result
+
 def getFangMaxPagesMain():
      regions = getRegions('http://sh.lianjia.com/ershoufang/', 'pudongxinqu')
      regions.reverse()
@@ -741,20 +739,20 @@ def main():
     mySQL = MySQL()
     mySQL._init_('localhost', 'root', 'root', 'fang')
     start_page=1
-    end_page=101
+    end_page = 10
     sleep_time=0.1
     regionsQueue = Queue()  # q是任务队列
     taskQueue= Queue()
     NUM = 1  #NUM是并发线程总数
+    getFangCond
     #JOBS = 100 #JOBS是有多少任务
     #getTransMain()
     #getTransThread()
     #getFangMain()
-    mainAll()
+    #mainAll()
     #getXiaoquMain()
-    getLineMain()
+    #getLineMain()
     url='http://sh.lianjia.com/ershoufang'
-    url='https://pan.baidu.com/notice/index'
     #url='http://sh.lianjia.com/chengjiao/beicai/'
     #getMaxPage(url)
     #getFangMaxPagesMain()

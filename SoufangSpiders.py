@@ -3,7 +3,8 @@
 # 程序：上海搜房网爬虫
 # 功能：抓取上海搜房网二手房在售、成交数据
 # 创建时间：2017/01/03
-# 更新历史：2017/01/07 增加多城市处理、随机Header
+# 更新历史：2017/01/07
+#
 # 使用库：requests、BeautifulSoup4、MySQLdb
 # 作者：yuzhucu
 #############################################################################
@@ -281,11 +282,12 @@ def main():
     isproxy = 0  # 如需要使用代理，改为1，并设置代理IP参数 proxy
     max_retry = 50
     url = 'http://esf.sh.fang.com'
-    cities = [{'base_url': 'http://esf.zz.fang.com', 'city': 'ZhengZhou'},
+    cities = [
               {'base_url': 'http://esf.sh.fang.com', 'city': 'ShangHai'},
+              {'base_url': 'http://esf.zz.fang.com', 'city': 'ZhengZhou'},
               {'base_url': 'http://esf.sz.fang.com', 'city': 'ShenZhen'},
               {'base_url': 'http://esf.gz.fang.com', 'city': 'GuangZhou'},
-              {'base_url': 'http://esf.fang.com', 'city': 'BeiJing'}
+              {'base_url': 'http://esf1.fang.com', 'city': 'BeiJing'}
               ]
     # getRegions(url)
     # getSubRegions(url)
