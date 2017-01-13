@@ -342,8 +342,8 @@ def main():
     global mySQL, start_page, end_page, sleep_time, isproxy, proxy, header
     mySQL = MySQL()
     soufang=SoufangSpider()
-    #mySQL._init_('localhost', 'root', 'root', 'fang')
-    mySQL._init_('115.159.209.101', 'root', 'root', 'fang')
+    mySQL._init_('localhost', 'root', 'root', 'fang')
+    
     isproxy = 0  # 如需要使用代理，改为1，并设置代理IP参数 proxy
     proxy = {"http": "http://110.37.84.147:8080", "https": "http://110.37.84.147:8080"}#这里需要替换成可用的代理IP
     header = randHeader()
