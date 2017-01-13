@@ -649,7 +649,7 @@ def main():
     print getCurrentTime(), 'Main Scrapy Starting'
     global mySQL, start_page, end_page, sleep_time,isproxy,header,proxy
     mySQL = MySQL()
-    mySQL._init_('115.159.209.101', 'root', 'root', 'fang')
+    mySQL._init_('localhost', 'root', 'root', 'fang')
     start_page=1
     end_page = 101
     sleep_time=0.1
